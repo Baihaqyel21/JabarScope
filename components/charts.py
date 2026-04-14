@@ -236,3 +236,80 @@ def elbow_chart(inertias: dict, optimal_k: int | None = None) -> go.Figure:
     )
     fig.update_xaxes(dtick=1)
     return fig
+
+
+def forecast_chart(
+    forecast_data: dict,
+    title: str,
+    color: str = COLORS["primary"],
+    height: int = 400,
+    y_label: str | None = None
+) -> go.Figure:
+    """Line chart untuk data historis dan proyeksi masa depan beserta Confidence Interval."""
+    points = forecast_data.get("data", [])
+    if not points:
+        return go.Figure()
+
+    df = pd.DataFrame(points)
+    hist_df = df[~df["is_forecast"]]
+    fore_df = df[df["is_forecast"]]
+
+    fig = go.Figure()
+    
+    # Historis
+    if not hist_df.empty:
+        fig.add_scatter(
+            x=hist_df["tahun"], y=hist_df["nilai"],
+            mode="lines+markers",
+            name="Historis",
+            line=dict(color=color, width=2.5),
+            marker=dict(size=8)
+        )
+        # Menghubungkan titik akhir historis dengan titik awal proyeksi
+        if not fore_df.empty:
+            connect_df = pd.concat([hist_df.iloc[[-1]], fore_df.iloc[[0]]])
+            fig.add_scatter(
+                x=connect_df["tahun"], y=connect_df["nilai"],
+                mode="lines",
+                showlegend=False,
+                line=dict(color=COLORS["warning"], width=2.5, dash="dash")
+            )
+
+    # Proyeksi
+    if not fore_df.empty:
+        # Pengecekan ada bounds atau tidak
+        if "nilai_upper" in fore_df.columns and "nilai_lower" in fore_df.columns:
+            fig.add_scatter(
+                x=pd.concat([fore_df["tahun"], fore_df["tahun"][::-1]]),
+                y=pd.concat([fore_df["nilai_upper"], fore_df["nilai_lower"][::-1]]),
+                fill="toself",
+                fillcolor=f"rgba({int(COLORS['warning'][1:3], 16)}, {int(COLORS['warning'][3:5], 16)}, {int(COLORS['warning'][5:], 16)}, 0.15)",
+                line=dict(color="rgba(255,255,255,0)"),
+                hoverinfo="skip",
+                showlegend=True,
+                name="Confidence Interval 95%"
+            )
+            
+        fig.add_scatter(
+            x=fore_df["tahun"], y=fore_df["nilai"],
+            mode="lines+markers+text",
+            name="Proyeksi (Linear Reg.)",
+            line=dict(color=COLORS["warning"], width=2.5, dash="dash"),
+            marker=dict(size=8, symbol="star-diamond"),
+            text=[f"{v:.1f}" for v in fore_df["nilai"]],
+            textposition="top center",
+            textfont=dict(color=COLORS["warning"], size=10)
+        )
+
+    fig.update_layout(
+        title=title,
+        height=height,
+        hovermode="x unified",
+        **_base_layout()
+    )
+    if y_label:
+        fig.update_yaxes(title_text=y_label)
+    fig.update_xaxes(title_text="Tahun", dtick=1)
+    
+    return fig
+

@@ -517,6 +517,6 @@ else:
     elif page == "ekonomi":
         t_ekonomi.render(master_df, tren_df, ekonomi_df)
     elif page == "infrastruktur":
-        t_infrastruktur.render(master_df, infra_df, geojson)
+        t_infrastruktur.render(master_df, tren_df, infra_df, geojson)
     elif page == "klaster":
         t_klaster.render(master_df, geojson)
