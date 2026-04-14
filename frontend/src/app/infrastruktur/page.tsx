@@ -42,14 +42,21 @@ function MiniKPI({ label, value, color, icon }: any) {
 function ForecastAreaChart({ forecast, color, label, suffix = '%', improvingIf = 'up' }: any) {
   const data = forecast?.data ?? []
   const metadata = forecast?.metadata ?? {}
+  if (!data || data.length === 0) return null;
   const historical = data.filter((d: any) => !d.is_forecast)
-  const forecasted = data.filter((d: any) => d.is_forecast)
+  const forecastedRaw = data.filter((d: any) => d.is_forecast).slice(0, 4)
   const lastHist = historical.length > 0 ? historical[historical.length - 1] : null
-  const lastFore = forecasted.length > 0 ? forecasted[forecasted.length - 1] : null
+  const lastFore = forecastedRaw.length > 0 ? forecastedRaw[forecastedRaw.length - 1] : null
+
+  // To avoid Recharts Area gaps, we explicitly pass a continuous array to each Area.
+  const forecasted = lastHist ? [lastHist, ...forecastedRaw] : forecastedRaw;
+  const combinedData = [...historical, ...forecastedRaw]
 
   const isUp = (lastFore?.nilai ?? 0) > (lastHist?.nilai ?? 0)
   const isImproving = improvingIf === 'up' ? isUp : !isUp
-  const trendColor = isImproving ? '#10b981' : '#f43f5e'
+  
+  const badgeColor = isImproving ? '#10b981' : '#f43f5e'
+  const foreColor = '#3b82f6' // Proyeksi always blue
   const gradientId = `gInf_${label.replace(/\s+/g, '_').replace(/[^\w]/g, '')}`
 
   return (
@@ -60,18 +67,15 @@ function ForecastAreaChart({ forecast, color, label, suffix = '%', improvingIf =
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
             <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm`}
-              style={{ background: `${trendColor}15`, color: trendColor, border: `1px solid ${trendColor}30` }}>
-              <div className={`w-1.5 h-1.5 rounded-full animate-pulse`} style={{ background: trendColor }} />
-              {isImproving ? 'Capaian Meningkat' : 'Perlu Perhatian'}
+              style={{ background: `${badgeColor}15`, color: badgeColor, border: `1px solid ${badgeColor}30` }}>
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse`} style={{ background: badgeColor }} />
+              {isImproving ? 'Proyeksi Positif' : 'Proyeksi Negatif'}
             </div>
-            <div className="px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 border border-white/10">
-               Akurasi: {Math.round(metadata.r_squared * 100)}%
+            <div className="px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/5 border border-white/10">
+              Regresi Linier • Akurasi {Math.round((metadata.r_squared || 0) * 100)}%
             </div>
           </div>
-          <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Proyeksi Layanan {label}</h3>
-          <p className="text-sm text-slate-500 max-w-lg leading-relaxed">
-            Data historis memperkirakan akses {label.toLowerCase()} akan berlanjut <span className="text-white font-medium">{isUp ? 'meningkat' : 'menurun'}</span> mencapai target 2028.
-          </p>
+          <h3 className="text-xl font-bold text-white tracking-tight">Proyeksi {label} 2028</h3>
         </div>
         <div className="flex items-center gap-6 border-l border-white/5 pl-8 relative z-10">
           <div className="text-center">
@@ -82,8 +86,8 @@ function ForecastAreaChart({ forecast, color, label, suffix = '%', improvingIf =
             <ArrowRight size={18} />
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5 opacity-70">Target 2028</p>
-            <p className="text-3xl font-black tabular-nums tracking-tighter" style={{ color: trendColor }}>
+            <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1.5 opacity-70">Target 2028</p>
+            <p className="text-3xl font-black tabular-nums tracking-tighter" style={{ color: foreColor }}>
               {lastFore?.nilai?.toFixed(1)}{suffix}
             </p>
           </div>
@@ -92,48 +96,51 @@ function ForecastAreaChart({ forecast, color, label, suffix = '%', improvingIf =
 
       <div className="h-[280px] w-full bg-[#0a0f1e]/40 rounded-3xl p-5 border border-white/5 shadow-inner relative overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 20, right: 30, left: -10, bottom: 0 }}>
+          <AreaChart data={combinedData} margin={{ top: 20, right: 30, left: -10, bottom: 0 }}>
             <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              <linearGradient id={`gInf_${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={badgeColor} stopOpacity={0.4} />
+                <stop offset="95%" stopColor={badgeColor} stopOpacity={0} />
               </linearGradient>
               <linearGradient id={`gInfFore_${gradientId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={trendColor} stopOpacity={0.25} />
-                <stop offset="95%" stopColor={trendColor} stopOpacity={0} />
+                <stop offset="5%" stopColor={foreColor} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={foreColor} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-            <XAxis dataKey="tahun" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }}
-              tickFormatter={(v) => `${Number(v).toFixed(0)}${suffix}`} domain={['auto', 'auto']} />
+            <XAxis dataKey="tahun" type="number" scale="time" domain={['dataMin', 'dataMax']} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} tickCount={combinedData.length} tickFormatter={(v) => Math.round(v).toString()} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} domain={['auto', 'auto']} />
             <Tooltip contentStyle={tooltipDark}
-              formatter={(v: any) => {
-                const isFore = data.find(d => d.nilai === v)?.is_forecast
-                return [`${Number(v).toFixed(1)}${suffix}`, isFore ? `Prediksi ${label}` : label]
+              formatter={(v: any, name: any, props: any) => {
+                const isFore = combinedData.find(d => d.nilai === v)?.is_forecast
+                return [`${Number(v).toFixed(2)}${suffix}`, isFore ? `Prediksi ${label}` : label]
               }}
+              labelFormatter={(l) => Math.round(l)}
               itemStyle={{ color }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
             
-            <Area type="natural" dataKey="nilai_upper" data={forecasted} stroke="none" fill={trendColor} fillOpacity={0.07} />
-            <Area type="natural" dataKey="nilai_lower" data={forecasted} stroke="none" fill={trendColor} fillOpacity={0.07} />
+            <Area type="monotone" dataKey="nilai_upper" data={forecasted} stroke="none" fill={foreColor} fillOpacity={0.07} />
+            <Area type="monotone" dataKey="nilai_lower" data={forecasted} stroke="none" fill={foreColor} fillOpacity={0.07} />
 
-            <Area type="natural" dataKey="nilai" name={label}
-              data={historical} stroke={color} strokeWidth={3}
-              fillOpacity={1} fill={`url(#${gradientId})`}
-              dot={{ fill: color, strokeWidth: 0, r: 4 }}
-              activeDot={{ r: 7, strokeWidth: 0, fill: color }}
+            <Area type="monotone" dataKey="nilai" name={label}
+              data={historical}
+              stroke={badgeColor} strokeWidth={3}
+              fillOpacity={1} fill={`url(#gInf_${gradientId})`}
+              dot={{ fill: badgeColor, strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 7, strokeWidth: 0, fill: badgeColor }}
             />
             
-            <Area type="natural" dataKey="nilai" data={forecasted}
-              stroke={trendColor} strokeWidth={3} strokeDasharray="6 4"
+            <Area type="monotone" dataKey="nilai"
+              data={forecasted}
+              stroke={foreColor} strokeWidth={3} strokeDasharray="6 4"
               fill={`url(#gInfFore_${gradientId})`}
-              dot={{ r: 5, fill: '#0a0f1e', strokeWidth: 2, stroke: trendColor }}
+              dot={{ r: 5, fill: '#0a0f1e', strokeWidth: 2, stroke: foreColor }}
               autoLabel={{ distance: 10 }}
               label={(props: any) => {
                 const { x, y, index, payload } = props
-                if (index === 0 || index === forecasted.length - 1) {
+                if (!payload || typeof payload.nilai !== 'number') return null;
+                if (payload.tahun === forecasted[forecasted.length - 1]?.tahun) {
                   return (
-                    <text x={x} y={y - 15} fill={trendColor} fontSize={10} font-900 textAnchor="middle" style={{ paintOrder: 'stroke', stroke: '#08101a', strokeWidth: 2 }}>
+                    <text x={x} y={y - 15} fill={badgeColor} fontSize={10} font-weight="900" textAnchor="middle" style={{ paintOrder: 'stroke', stroke: '#08101a', strokeWidth: 2 }}>
                       {payload.nilai.toFixed(1)}{suffix}
                     </text>
                   )
@@ -250,50 +257,14 @@ export default function InfrastrukturPage() {
       )}
 
       {/* ── FORECASTING SECTION ── */}
-      {(forecast.sanitasi?.length > 0 || forecast.air?.length > 0) && (
-        <div className="forecast-section p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)' }}>
-                <Activity size={14} className="text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-white">Proyeksi & Forecasting Infrastruktur</h2>
-                <p className="text-xs text-slate-500">Linear regression · 4 tahun ke depan dengan confidence interval 95%</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-xs font-bold text-amber-400">AI Prediktif</span>
-            </div>
-          </div>
-
-          <div className="flex gap-2 mb-5 p-1 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[
-              { key: 'sanitasi', label: 'Proyeksi Sanitasi Layak', color: '#10b981' },
-              { key: 'air',      label: 'Proyeksi Air Minum Layak', color: '#06b6d4' },
-            ].map(t => (
-              <button key={t.key} onClick={() => setForecastTab(t.key as any)}
-                className="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all"
-                style={{
-                  background: forecastTab === t.key ? `${t.color}18` : 'transparent',
-                  color: forecastTab === t.key ? t.color : '#64748b',
-                  border: forecastTab === t.key ? `1px solid ${t.color}35` : '1px solid transparent',
-                }}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <ForecastAreaChart
-            forecast={forecast[forecastTab]}
-            color={forecastTab === 'sanitasi' ? '#10b981' : '#06b6d4'}
-            label={forecastTab === 'sanitasi' ? 'Sanitasi Layak (%)' : 'Air Minum Layak (%)'}
-            improvingIf="up"
-          />
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-6">
+        <ForecastAreaChart
+          forecast={forecast.sanitasi} dataKey="sanitasi" color="#10b981" label="Sanitasi Layak (%)" improvingIf="up"
+        />
+        <ForecastAreaChart
+          forecast={forecast.air} dataKey="air" color="#06b6d4" label="Air Minum Layak (%)" improvingIf="up"
+        />
+      </div>
 
       {/* % Jalan Baik chart */}
       <div className="glass-card rounded-2xl p-6">
