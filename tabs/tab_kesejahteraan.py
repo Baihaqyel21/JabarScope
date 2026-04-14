@@ -4,10 +4,12 @@ tab_kesejahteraan.py — Tab 3: Kesejahteraan
 import streamlit as st
 import pandas as pd
 from components.maps import choropleth_map
-from components.charts import bar_ranked, scatter_2var, line_trend
+from components.charts import bar_ranked, scatter_2var, line_trend, forecast_chart
 from components.radar import radar_welfare
 from utils.insights import insight_kesejahteraan, render_callout
 from utils.preprocessor import get_prov_avg_tren
+from utils.forecast import build_forecast_series
+
 
 
 MAP_INDICATORS = {
@@ -138,3 +140,42 @@ def render(master_df: pd.DataFrame, tren_df: pd.DataFrame,
             tbl.columns = [c.replace("\n", " ") for c in tbl.columns]
             st.dataframe(tbl.reset_index(drop=True), use_container_width=True,
                          hide_index=True, height=340)
+
+    st.markdown("---")
+    
+    # ── Forecasting / Proyeksi Kedepan ────────────────────────────────────────
+    _section("Proyeksi Tren Kedepan (Predictive AI)")
+    
+    f_col1, f_col2 = st.columns([3, 2])
+    with f_col2:
+        st.info("💡 **Penjelasan Pemodelan**\n\nProyeksi ini menggunakan model **Regresi Linier (Linear Regression)** "
+                "berdasarkan data runtut waktu 2020-2024. Area arsiran menunjukkan tingkat kepercayaan "
+                "(*Confidence Interval 95%*) dari tren yang terbentuk.")
+        
+        fore_label = st.selectbox("Pilih Indikator Proyeksi", ["IPM", "Kemiskinan (%)", "Sanitasi Layak (%)", "Air Minum Layak (%)"], key="fore_kesej")
+        fore_ind_map = {
+            "IPM": "IPM",
+            "Kemiskinan (%)": "PCT_Miskin",
+            "Sanitasi Layak (%)": "Sanitasi_Layak_Pct",
+            "Air Minum Layak (%)": "Air_Minum_Layak_Pct"
+        }
+        
+    with f_col1:
+        ind_target = fore_ind_map[fore_label]
+        fore_data = build_forecast_series(tren_df, ind_target, horizon=4)
+        meta = fore_data.get("metadata", {})
+        
+        if meta:
+             r2 = meta.get("r_squared", 0)
+             slope = meta.get("slope", 0)
+             if slope > 0:
+                 trend_text = "Tren **meningkat**"
+             else:
+                 trend_text = "Tren **menurun**"
+                 
+             st.markdown(f"Akurasi Model ($R^2$): **{r2:.4f}** | {trend_text} secara linier.")
+             fig_fore = forecast_chart(fore_data, title=f"Proyeksi {fore_label} hingga 2028", y_label=fore_label)
+             st.plotly_chart(fig_fore, use_container_width=True)
+        else:
+             st.warning("Data historis tidak mencukupi untuk pemodelan proyeksi.")
+

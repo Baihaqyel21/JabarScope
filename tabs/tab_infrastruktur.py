@@ -3,9 +3,10 @@ tab_infrastruktur.py — Tab 5: Infrastruktur & Layanan Dasar
 """
 import streamlit as st
 import pandas as pd
-from components.charts import stacked_bar_jalan, bar_ranked, scatter_2var
+from components.charts import stacked_bar_jalan, bar_ranked, scatter_2var, forecast_chart
 from components.maps import choropleth_map
 from utils.insights import insight_infrastruktur, render_callout
+from utils.forecast import build_forecast_series
 
 
 def _section(text):
@@ -17,7 +18,7 @@ def _section(text):
     )
 
 
-def render(master_df: pd.DataFrame, infrastruktur_df: pd.DataFrame, geojson: dict | None):
+def render(master_df: pd.DataFrame, tren_df: pd.DataFrame, infrastruktur_df: pd.DataFrame, geojson: dict | None):
     st.caption("Kondisi jalan, sanitasi, dan akses air minum layak per kabupaten/kota 2024.")
 
     pct_col  = "% Jalan\nBaik"
@@ -36,6 +37,42 @@ def render(master_df: pd.DataFrame, infrastruktur_df: pd.DataFrame, geojson: dic
     if jln_cols:
         fig_stack = stacked_bar_jalan(df=infrastruktur_df, label_col="Nama", height=480)
         st.plotly_chart(fig_stack, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Forecasting / Proyeksi Kedepan ────────────────────────────────────────
+    _section("Proyeksi Layanan Dasar Kedepan (Predictive AI)")
+    
+    col_fc1, col_fc2 = st.columns([3, 2])
+    with col_fc2:
+        st.info("💡 **Penjelasan Pemodelan**\n\nProyeksi Demografi menggunakan model **Regresi Linier** terhadap data "
+                "historis kondisi Sanitasi dan Air Minum. "
+                "Area arsiran menggambarkan rentang keyakinan statistik terhadap proyeksi masa depan (*Confidence Interval 95%*).")
+        
+        fore_label_inf = st.selectbox("Pilih Indikator Proyeksi", ["Sanitasi Layak (%)", "Air Minum Layak (%)"], key="fore_inf")
+        fore_ind_map_inf = {
+            "Sanitasi Layak (%)": "Sanitasi_Layak_Pct",
+            "Air Minum Layak (%)": "Air_Minum_Layak_Pct"
+        }
+        
+    with col_fc1:
+        ind_target_inf = fore_ind_map_inf[fore_label_inf]
+        fore_data_inf = build_forecast_series(tren_df, ind_target_inf, horizon=4)
+        meta_inf = fore_data_inf.get("metadata", {})
+        
+        if meta_inf:
+             r2_inf = meta_inf.get("r_squared", 0)
+             slope_inf = meta_inf.get("slope", 0)
+             if slope_inf > 0:
+                 trend_text_inf = "Tren **membaik/meningkat**"
+             else:
+                 trend_text_inf = "Tren **menurun/melambat**"
+                 
+             st.markdown(f"Akurasi Model ($R^2$): **{r2_inf:.4f}** | {trend_text_inf} secara linier.")
+             fig_fore_inf = forecast_chart(fore_data_inf, title=f"Proyeksi {fore_label_inf} hingga 2028", y_label=fore_label_inf, color="#10b981")
+             st.plotly_chart(fig_fore_inf, use_container_width=True)
+        else:
+             st.warning("Data historis tidak mencukupi untuk pemodelan proyeksi.")
 
     st.markdown("---")
 
