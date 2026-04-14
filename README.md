@@ -8,7 +8,7 @@
 
 ---
 
-## ✨ Fitur Utama
+## ✨ Fitur
 
 ### 1. 📈 Proyeksi & Forecasting Prediktif
 Menggunakan model **Regresi Linier (OLS)** untuk memprediksi tren indikator utama hingga tahun **2028**.
