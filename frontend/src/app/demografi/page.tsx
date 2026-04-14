@@ -29,15 +29,22 @@ const tooltipDark = {
 function ForecastAreaChart({ forecast, dataKey, color, label, formatter, unit, improvingIf = 'up' }: any) {
   const data = forecast?.data ?? []
   const metadata = forecast?.metadata ?? {}
+  if (!data || data.length === 0) return null;
   const historical = data.filter((d: any) => !d.is_forecast)
-  const forecasted = data.filter((d: any) => d.is_forecast)
+  const forecastedRaw = data.filter((d: any) => d.is_forecast).slice(0, 4)
   const lastHist = historical.length > 0 ? historical[historical.length - 1] : null
-  const lastFore = forecasted.length > 0 ? forecasted[forecasted.length - 1] : null
+  const lastFore = forecastedRaw.length > 0 ? forecastedRaw[forecastedRaw.length - 1] : null
+  
+  // To avoid Recharts Area gaps, we explicitly pass a continuous array to each Area.
+  const forecasted = lastHist ? [lastHist, ...forecastedRaw] : forecastedRaw;
+  const combinedData = [...historical, ...forecastedRaw]
 
   const fmt = formatter ?? ((v: any) => `${Number(v).toFixed(2)}${unit ?? ''}`)
   const isUp = (lastFore?.nilai ?? 0) > (lastHist?.nilai ?? 0)
   const isImproving = improvingIf === 'up' ? isUp : !isUp
-  const trendColor = isImproving ? '#10b981' : '#f43f5e'
+  
+  const badgeColor = isImproving ? '#10b981' : '#f43f5e'
+  const foreColor = '#3b82f6' // Proyeksi always blue
 
   return (
     <div className="space-y-6">
@@ -46,18 +53,15 @@ function ForecastAreaChart({ forecast, dataKey, color, label, formatter, unit, i
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
             <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm`}
-              style={{ background: `${trendColor}15`, color: trendColor, border: `1px solid ${trendColor}30` }}>
-              <div className={`w-1.5 h-1.5 rounded-full animate-pulse`} style={{ background: trendColor }} />
-              {isImproving ? 'Pertumbuhan Positif' : 'Perlu Perhatian'}
+              style={{ background: `${badgeColor}15`, color: badgeColor, border: `1px solid ${badgeColor}30` }}>
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse`} style={{ background: badgeColor }} />
+              {isImproving ? 'Proyeksi Positif' : 'Proyeksi Negatif'}
             </div>
-            <div className="px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white/5 border border-white/5">
-              R²: {metadata.r_squared}
+            <div className="px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/5 border border-white/10">
+              Regresi Linier • Akurasi {Math.round((metadata.r_squared || 0) * 100)}%
             </div>
           </div>
-          <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Prediksi {label} 2028</h3>
-          <p className="text-sm text-slate-500 max-w-lg leading-relaxed">
-            Analisis regresi terhadap tren {metadata.n_samples} tahun terakhir memperkirakan {label.toLowerCase()} akan berlanjut <span className="text-white font-medium">{isUp ? 'meningkat' : 'menurun'}</span>.
-          </p>
+          <h3 className="text-xl font-bold text-white tracking-tight">Proyeksi {label} 2028</h3>
         </div>
         <div className="flex items-center gap-6 border-l border-white/5 pl-8 relative z-10">
           <div className="text-center">
@@ -69,7 +73,7 @@ function ForecastAreaChart({ forecast, dataKey, color, label, formatter, unit, i
           </div>
           <div className="text-center">
             <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1.5 opacity-70">Target 2028</p>
-            <p className="text-3xl font-black tabular-nums tracking-tighter" style={{ color: trendColor }}>
+            <p className="text-3xl font-black tabular-nums tracking-tighter" style={{ color: foreColor }}>
               {fmt(lastFore?.nilai)}
             </p>
           </div>
@@ -78,47 +82,51 @@ function ForecastAreaChart({ forecast, dataKey, color, label, formatter, unit, i
 
       <div className="h-[280px] w-full bg-[#0a0f1e]/40 rounded-3xl p-5 border border-white/5 shadow-inner relative overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 20, right: 30, left: -10, bottom: 0 }}>
+          <AreaChart data={combinedData} margin={{ top: 20, right: 30, left: -10, bottom: 0 }}>
             <defs>
-              <linearGradient id={`grad_${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              <linearGradient id={`gDem_${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={badgeColor} stopOpacity={0.4} />
+                <stop offset="95%" stopColor={badgeColor} stopOpacity={0} />
               </linearGradient>
               <linearGradient id={`gFore_${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={trendColor} stopOpacity={0.2} />
-                <stop offset="95%" stopColor={trendColor} stopOpacity={0} />
+                <stop offset="5%" stopColor={foreColor} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={foreColor} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-            <XAxis dataKey="tahun" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} />
+            <XAxis dataKey="tahun" type="number" scale="time" domain={['dataMin', 'dataMax']} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} tickCount={combinedData.length} tickFormatter={(v) => Math.round(v).toString()} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} domain={['auto', 'auto']} />
             <Tooltip contentStyle={tooltipDark}
-              formatter={(v: any) => {
-                const isFore = data.find(d => d.nilai === v)?.is_forecast
+              formatter={(v: any, name: any, props: any) => {
+                const isFore = combinedData.find(d => d.nilai === v)?.is_forecast
                 return [fmt(v), isFore ? `Prediksi ${label}` : label]
               }}
+              labelFormatter={(l) => Math.round(l)}
               itemStyle={{ color }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
             
-            <Area type="natural" dataKey="nilai_upper" data={forecasted} stroke="none" fill={trendColor} fillOpacity={0.06} />
-            <Area type="natural" dataKey="nilai_lower" data={forecasted} stroke="none" fill={trendColor} fillOpacity={0.06} />
+            <Area type="monotone" dataKey="nilai_upper" data={forecasted} stroke="none" fill={foreColor} fillOpacity={0.07} />
+            <Area type="monotone" dataKey="nilai_lower" data={forecasted} stroke="none" fill={foreColor} fillOpacity={0.07} />
 
-            <Area type="natural" dataKey="nilai" name={label}
-              data={historical} stroke={color} strokeWidth={3}
-              fillOpacity={1} fill={`url(#grad_${dataKey})`}
-              dot={{ fill: color, strokeWidth: 0, r: 4 }}
-              activeDot={{ r: 7, strokeWidth: 0, fill: color }}
+            <Area type="monotone" dataKey="nilai" name={label}
+              data={historical}
+              stroke={badgeColor} strokeWidth={3}
+              fillOpacity={1} fill={`url(#gDem_${dataKey})`}
+              dot={{ fill: badgeColor, strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 7, strokeWidth: 0, fill: badgeColor }}
             />
             
-            <Area type="natural" dataKey="nilai" data={forecasted}
-              stroke={trendColor} strokeWidth={3} strokeDasharray="6 4"
+            <Area type="monotone" dataKey="nilai"
+              data={forecasted}
+              stroke={foreColor} strokeWidth={3} strokeDasharray="6 4"
               fill={`url(#gFore_${dataKey})`}
-              dot={{ r: 5, fill: '#0a0f1e', strokeWidth: 2, stroke: trendColor }}
+              dot={{ r: 5, fill: '#0a0f1e', strokeWidth: 2, stroke: foreColor }}
               autoLabel={{ distance: 10 }}
               label={(props: any) => {
                 const { x, y, index, payload } = props
-                if (index === 0 || index === forecasted.length - 1) {
+                if (!payload || typeof payload.nilai !== 'number') return null;
+                if (payload.tahun === forecasted[forecasted.length - 1]?.tahun) {
                   return (
-                    <text x={x} y={y - 15} fill={trendColor} fontSize={10} fontWeight="900" textAnchor="middle" style={{ paintOrder: 'stroke', stroke: '#08101a', strokeWidth: 2 }}>
+                    <text x={x} y={y - 15} fill={badgeColor} fontSize={10} fontWeight="900" textAnchor="middle" style={{ paintOrder: 'stroke', stroke: '#08101a', strokeWidth: 2 }}>
                       {fmt(payload.nilai)}
                     </text>
                   )
@@ -263,140 +271,23 @@ export default function DemografiPage() {
         </div>
       )}
 
-      {/* Trend Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[
-          { title: 'Tren TPT (Pengangguran)', data: tptTrend, key: 'TPT', color: '#f43f5e', fmt: (v: any) => `${Number(v).toFixed(2)}%`, suffix: '%' },
-          { title: 'Tren TPAK (Partisipasi Kerja)', data: tpakTrend, key: 'TPAK', color: '#10b981', fmt: (v: any) => `${Number(v).toFixed(2)}%`, suffix: '%' },
-        ].map(({ title, data: d, key, color, fmt, suffix }, idx) => (
-          <div key={idx} className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-1 h-5 rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}80` }} />
-              <h2 className="text-sm font-bold text-white">{title}</h2>
-            </div>
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={d} margin={{ top: 5, right: 10, left: -12, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id={`lineGrad_${key}`} x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor={color} stopOpacity={0.6} />
-                      <stop offset="100%" stopColor={color} stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="tahun" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }}
-                    tickFormatter={(v) => `${v}${suffix}`} domain={['auto', 'auto']} />
-                  <Tooltip contentStyle={tooltipDark} formatter={(v: any) => [fmt(v), key]}
-                    itemStyle={{ color }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
-                  <Line type="monotone" dataKey={key}
-                    stroke={`url(#lineGrad_${key})`} strokeWidth={3}
-                    dot={{ fill: color, strokeWidth: 0, r: 5 }}
-                    activeDot={{ r: 7, strokeWidth: 2, stroke: `${color}50`, fill: color }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        ))}
+      {/* Trend Forecasts (Replacing old non-forecast line charts) */}
+      <div className="grid grid-cols-1 gap-6">
+        <ForecastAreaChart
+          forecast={forecast.tpt} dataKey="tpt" color="#f43f5e" label="TPT (Pengangguran)" unit="%" improvingIf="down"
+        />
+        <ForecastAreaChart
+          forecast={forecast.tpak} dataKey="tpak" color="#10b981" label="TPAK (Partisipasi Kerja)" unit="%"
+        />
+      </div>
+      <div className="w-full">
+        <ForecastAreaChart
+          forecast={forecast.umk} dataKey="umk" color="#8b5cf6" label="UMK Rata-rata Jawa Barat"
+          formatter={(v: any) => `Rp ${(v / 1_000_000).toFixed(1)} Juta`}
+        />
       </div>
 
-      {/* UMK Trend */}
-      <div className="glass-card rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-5 rounded-full" style={{ background: '#8b5cf6', boxShadow: '0 0 8px rgba(139,92,246,0.5)' }} />
-          <h2 className="text-sm font-bold text-white">Tren UMK Rata-rata Jawa Barat (Rp)</h2>
-        </div>
-        <div className="h-[220px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={umkTrend} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gradUMK" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="tahun" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }}
-                tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} domain={['auto', 'auto']} />
-              <Tooltip contentStyle={tooltipDark}
-                formatter={(v: any) => [`Rp ${Number(v).toLocaleString('id-ID')}`, 'UMK Rata-rata']}
-                itemStyle={{ color: '#8b5cf6' }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
-              <Area type="monotone" dataKey="UMK"
-                stroke="#8b5cf6" strokeWidth={2.5}
-                fillOpacity={1} fill="url(#gradUMK)"
-                dot={{ fill: '#8b5cf6', strokeWidth: 0, r: 5 }}
-                activeDot={{ r: 7, strokeWidth: 0 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
 
-      {/* ── FORECASTING SECTION ── */}
-      {(forecast.tpt?.length > 0 || forecast.tpak?.length > 0 || forecast.umk?.length > 0) && (
-        <div className="forecast-section p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)' }}>
-                <Activity size={14} className="text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-white">Proyeksi & Forecasting</h2>
-                <p className="text-xs text-slate-500">Linear regression · 4 tahun ke depan dengan confidence interval 95%</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-xs font-bold text-amber-400">Prediktif</span>
-            </div>
-          </div>
-
-          {/* Tab selector */}
-          <div className="flex gap-2 mb-5 p-1 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {[
-              { key: 'tpt', label: 'TPT (Pengangguran)', color: '#f43f5e' },
-              { key: 'tpak', label: 'TPAK (Partisipasi)', color: '#10b981' },
-              { key: 'umk', label: 'UMK (Upah Minimum)', color: '#8b5cf6' },
-            ].map(t => (
-              <button key={t.key}
-                onClick={() => setForecastTab(t.key as any)}
-                className="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all"
-                style={{
-                  background: forecastTab === t.key ? `${t.color}18` : 'transparent',
-                  color: forecastTab === t.key ? t.color : '#64748b',
-                  border: forecastTab === t.key ? `1px solid ${t.color}35` : '1px solid transparent',
-                }}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <ForecastAreaChart
-            forecast={forecastConfigs[forecastTab].forecast}
-            dataKey={forecastConfigs[forecastTab].dataKey}
-            color={forecastConfigs[forecastTab].color}
-            label={forecastConfigs[forecastTab].label}
-            formatter={forecastConfigs[forecastTab].fmt}
-            improvingIf={forecastConfigs[forecastTab].improvingIf}
-          />
-
-          <div className="mt-4 flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <div className="w-6 h-0.5 rounded-full" style={{ background: forecastConfigs[forecastTab].color }} />
-              <span>Data historis</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <div className="w-6 h-0.5 rounded-full border-dashed border-t border-amber-400" style={{ borderStyle: 'dashed' }} />
-              <span>Proyeksi (linear regression)</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <div className="w-3 h-3 rounded opacity-40" style={{ background: 'rgba(245,158,11,0.3)' }} />
-              <span>Confidence interval 95%</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bar charts per region */}
       {[

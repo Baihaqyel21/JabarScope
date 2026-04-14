@@ -3,9 +3,10 @@ tab_demografi.py — Tab 2: Demografi & Ketenagakerjaan
 """
 import streamlit as st
 import pandas as pd
-from components.charts import bar_ranked, line_trend, scatter_2var
+from components.charts import bar_ranked, line_trend, scatter_2var, forecast_chart
 from utils.insights import insight_demografi, render_callout
 from utils.preprocessor import get_prov_avg_tren
+from utils.forecast import build_forecast_series
 
 
 INDICATOR_OPTIONS = {
@@ -60,6 +61,47 @@ def render(master_df: pd.DataFrame, tren_df: pd.DataFrame, demografi_df: pd.Data
         st.plotly_chart(fig_trend, use_container_width=True)
     else:
         st.info("Pilih minimal satu kabupaten/kota untuk menampilkan grafik tren.")
+
+    st.markdown("---")
+
+    # ── Forecasting / Proyeksi Kedepan ────────────────────────────────────────
+    _section("Proyeksi Tren Kedepan (Predictive AI)")
+    
+    col_fc1, col_fc2 = st.columns([3, 2])
+    with col_fc2:
+        st.info("💡 **Penjelasan Pemodelan**\n\nProyeksi Demografi menggunakan model **Regresi Linier** terhadap data historis 2020-2024. "
+                "Area arsiran abu-abu merupakan *Confidence Interval 95%*.\n\n"
+                "Untuk indikator UMK, tren diproyeksikan dari Rata-rata Jawa Barat.")
+        
+        fore_label_demo = st.selectbox("Pilih Indikator Proyeksi", ["TPT", "TPAK", "UMK"], key="fore_demo")
+        fore_ind_map_demo = {
+            "TPT": "TPT_Agustus",
+            "TPAK": "TPAK_Agustus",
+            "UMK": "UMK_Rp"
+        }
+        
+    with col_fc1:
+        ind_target_demo = fore_ind_map_demo[fore_label_demo]
+        fore_data_demo = build_forecast_series(tren_df, ind_target_demo, horizon=4)
+        meta_demo = fore_data_demo.get("metadata", {})
+        
+        if meta_demo:
+             r2_demo = meta_demo.get("r_squared", 0)
+             slope_demo = meta_demo.get("slope", 0)
+             if slope_demo > 0:
+                 trend_text_demo = "Tren **meningkat**"
+             else:
+                 trend_text_demo = "Tren **menurun**"
+                 
+             st.markdown(f"Akurasi Model ($R^2$): **{r2_demo:.4f}** | {trend_text_demo} secara linier.")
+             
+             # Format Y-label if UMK to show in thousands/millions to save space
+             fore_title = f"Proyeksi {fore_label_demo} hingga 2028"
+             
+             fig_fore_demo = forecast_chart(fore_data_demo, title=fore_title, y_label=fore_label_demo)
+             st.plotly_chart(fig_fore_demo, use_container_width=True)
+        else:
+             st.warning("Data historis tidak mencukupi untuk pemodelan proyeksi.")
 
     st.markdown("---")
 

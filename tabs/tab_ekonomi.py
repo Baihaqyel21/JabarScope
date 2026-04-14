@@ -3,9 +3,10 @@ tab_ekonomi.py — Tab 4: Ekonomi Daerah
 """
 import streamlit as st
 import pandas as pd
-from components.charts import bar_ranked, line_trend, scatter_2var
+from components.charts import bar_ranked, line_trend, scatter_2var, forecast_chart
 from utils.insights import insight_ekonomi, render_callout
 from utils.preprocessor import get_prov_avg_tren
+from utils.forecast import build_forecast_series
 
 
 TREN_INDICATORS = {
@@ -54,6 +55,43 @@ def render(master_df: pd.DataFrame, tren_df: pd.DataFrame, ekonomi_df: pd.DataFr
             st.plotly_chart(fig_tren, use_container_width=True)
         else:
             st.info("Pilih minimal satu daerah.")
+
+    st.markdown("---")
+
+    # ── Forecasting / Proyeksi Kedepan ────────────────────────────────────────
+    _section("Proyeksi Tren Kedepan (Predictive AI)")
+    
+    col_fc1, col_fc2 = st.columns([3, 2])
+    with col_fc2:
+        st.info("💡 **Penjelasan Pemodelan**\n\nProyeksi Demografi menggunakan model **Regresi Linier** berdasarkan tren "
+                "PDRB dan Pertumbuhan historis 2020-2024. Area arsiran menunjukkan tingkat kepercayaan "
+                "(*Confidence Interval 95%*) dari tren yang diproyeksikan.\n\n"
+                "Semakin tinggi R-Squared ($R^2$), semakin akurat prediksi tren tersebut.")
+        
+        fore_label_ekon = st.selectbox("Pilih Indikator Proyeksi", ["PDRB/Kapita", "Pertumbuhan PDRB (%)"], key="fore_ekon")
+        fore_ind_map_ekon = {
+            "PDRB/Kapita": "PDRB_PerKapita_ADHB_RibuRp",
+            "Pertumbuhan PDRB (%)": "Laju_Pertumbuhan_PDRB_ADHK"
+        }
+        
+    with col_fc1:
+        ind_target_ekon = fore_ind_map_ekon[fore_label_ekon]
+        fore_data_ekon = build_forecast_series(tren_df, ind_target_ekon, horizon=4)
+        meta_ekon = fore_data_ekon.get("metadata", {})
+        
+        if meta_ekon:
+             r2_ekon = meta_ekon.get("r_squared", 0)
+             slope_ekon = meta_ekon.get("slope", 0)
+             if slope_ekon > 0:
+                 trend_text_ekon = "Tren **membaik/meningkat**"
+             else:
+                 trend_text_ekon = "Tren **menurun/melambat**"
+                 
+             st.markdown(f"Akurasi Model ($R^2$): **{r2_ekon:.4f}** | {trend_text_ekon} secara linier.")
+             fig_fore_ekon = forecast_chart(fore_data_ekon, title=f"Proyeksi Rata-rata {fore_label_ekon} hingga 2028", y_label=fore_label_ekon)
+             st.plotly_chart(fig_fore_ekon, use_container_width=True)
+        else:
+             st.warning("Data historis tidak mencukupi untuk pemodelan proyeksi.")
 
     st.markdown("---")
 
