@@ -11,7 +11,7 @@ import { AlertCircle, Map, Road, Droplets, Activity, ArrowRight } from 'lucide-r
 
 const ChoroplethMap = dynamic(() => import('@/components/ChoroplethMap'), { ssr: false })
 
-const API = 'http://127.0.0.1:8000'
+const API = '/api'
 
 const tooltipDark = {
   borderRadius: '14px',

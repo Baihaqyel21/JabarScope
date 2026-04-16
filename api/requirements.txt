@@ -1,0 +1,7 @@
+fastapi
+mangum
+pandas
+openpyxl
+scikit-learn
+numpy
+scipy

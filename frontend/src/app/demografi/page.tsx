@@ -12,7 +12,7 @@ import { Users, Briefcase, TrendingUp, Banknote, AlertCircle, Map, Activity, Che
 
 const ChoroplethMap = dynamic(() => import('@/components/ChoroplethMap'), { ssr: false })
 
-const API = 'http://127.0.0.1:8000'
+const API = '/api'
 
 const tooltipDark = {
   borderRadius: '14px',

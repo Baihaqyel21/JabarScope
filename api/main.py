@@ -1,9 +1,8 @@
 import sys
 import os
-# Ensure backend path is on PYTHONPATH
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-from backend.main import app as fastapi_app
+# Add the repo root to the Python path so all internal modules resolve
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 
-# Vercel expects the handler to be named `app`
-app = fastapi_app
+from backend.main import app
