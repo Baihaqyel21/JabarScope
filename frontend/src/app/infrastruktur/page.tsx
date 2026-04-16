@@ -134,7 +134,6 @@ function ForecastAreaChart({ forecast, color, label, suffix = '%', improvingIf =
               stroke={foreColor} strokeWidth={3} strokeDasharray="6 4"
               fill={`url(#gInfFore_${gradientId})`}
               dot={{ r: 5, fill: '#0a0f1e', strokeWidth: 2, stroke: foreColor }}
-              autoLabel={{ distance: 10 }}
               label={(props: any) => {
                 const { x, y, index, payload } = props
                 if (!payload || typeof payload.nilai !== 'number') return null;
