@@ -309,7 +309,7 @@ export default function DemografiPage() {
                 <Tooltip contentStyle={tooltipDark} formatter={fmt as any}
                   itemStyle={{ color }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
                 <Bar dataKey={key} fill={color} radius={[0, 6, 6, 0]}
-                  background={{ fill: 'rgba(255,255,255,0.02)', radius: [0, 6, 6, 0] }} />
+                  background={{ fill: 'rgba(255,255,255,0.02)' }} />
               </BarChart>
             </ResponsiveContainer>
           </div>

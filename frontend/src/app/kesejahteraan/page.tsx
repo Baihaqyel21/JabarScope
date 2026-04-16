@@ -291,7 +291,7 @@ export default function KesejahteraanPage() {
               <Tooltip contentStyle={tooltipDark} formatter={(v: any) => [Number(v).toFixed(2), 'IPM']}
                 itemStyle={{ color: '#3b82f6' }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
               <Bar dataKey="ipm" fill="#3b82f6" radius={[0, 6, 6, 0]}
-                background={{ fill: 'rgba(255,255,255,0.02)', radius: [0, 6, 6, 0] }} />
+                background={{ fill: 'rgba(255,255,255,0.02)' }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -312,7 +312,7 @@ export default function KesejahteraanPage() {
               <Tooltip contentStyle={tooltipDark} formatter={(v: any) => [`${Number(v).toFixed(2)}%`, '% Miskin']}
                 itemStyle={{ color: '#f43f5e' }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
               <Bar dataKey="pct_miskin" fill="#f43f5e" radius={[0, 6, 6, 0]}
-                background={{ fill: 'rgba(255,255,255,0.02)', radius: [0, 6, 6, 0] }} />
+                background={{ fill: 'rgba(255,255,255,0.02)' }} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -343,7 +343,7 @@ export default function KesejahteraanPage() {
               <Tooltip contentStyle={tooltipDark} formatter={(v: any, name: any) => [`${Number(v).toFixed(1)}%`, name]}
                 itemStyle={{ color: '#10b981' }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
               <Bar dataKey="sanitasi" name="Sanitasi Layak" fill="#10b981" radius={[0, 4, 4, 0]}
-                background={{ fill: 'rgba(255,255,255,0.02)', radius: [0, 4, 4, 0] }} />
+                background={{ fill: 'rgba(255,255,255,0.02)' }} />
               <Bar dataKey="air_minum" name="Air Minum Layak" fill="#06b6d4" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>

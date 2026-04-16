@@ -300,7 +300,7 @@ export default function InfrastrukturPage() {
                 }}
                 itemStyle={{ color: '#a5b4fc' }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
               <Bar dataKey="pct_jln_baik" name="% Jalan Baik" radius={[0, 6, 6, 0]}
-                background={{ fill: 'rgba(255,255,255,0.02)', radius: [0, 6, 6, 0] }}>
+                background={{ fill: 'rgba(255,255,255,0.02)' }}>
                 {kabJalanSorted.map((d: any, i: number) => (
                   <Cell key={i} fill={jalanColor(d.pct_jln_baik ?? 0)} />
                 ))}
@@ -371,7 +371,7 @@ export default function InfrastrukturPage() {
                 formatter={(v: any, name: any) => [`${Number(v).toFixed(1)}%`, name]}
                 itemStyle={{ color: '#10b981' }} labelStyle={{ color: '#e2e8f0', fontWeight: 700 }} />
               <Bar dataKey="sanitasi"  name="Sanitasi Layak"  fill="#10b981" radius={[0, 4, 4, 0]}
-                background={{ fill: 'rgba(255,255,255,0.02)', radius: [0, 4, 4, 0] }} />
+                background={{ fill: 'rgba(255,255,255,0.02)' }} />
               <Bar dataKey="air_minum" name="Air Minum Layak" fill="#06b6d4" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
