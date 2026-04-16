@@ -176,8 +176,8 @@ export default function DemografiPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/api/demografi`).then(r => { if (!r.ok) throw new Error(); return r.json() }),
-      fetch(`${API}/api/geojson`).then(r => r.json()).catch(() => null),
+      fetch(`${API}/demografi`).then(r => { if (!r.ok) throw new Error(); return r.json() }),
+      fetch(`${API}/geojson`).then(r => r.json()).catch(() => null),
     ])
       .then(([d, geo]) => { setData(d); setGeojson(geo); setLoading(false) })
       .catch(() => { setError(true); setLoading(false) })

@@ -66,7 +66,7 @@ export default function KlasterPage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    fetch(`${API}/api/clustering`)
+    fetch(`${API}/clustering`)
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then(d => { setData(d); setLoading(false) })
       .catch(() => { setError(true); setLoading(false) })

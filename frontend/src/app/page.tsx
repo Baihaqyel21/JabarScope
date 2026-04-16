@@ -290,9 +290,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/api/overview`).then(r => { if (!r.ok) throw new Error(); return r.json() }),
-      fetch(`${API}/api/geojson`).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API}/api/clustering`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${API}/overview`).then(r => { if (!r.ok) throw new Error(); return r.json() }),
+      fetch(`${API}/geojson`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${API}/clustering`).then(r => r.ok ? r.json() : null).catch(() => null),
     ])
       .then(([overview, geo, clust]) => {
         setData(overview); setGeojson(geo); setClustering(clust); setLoading(false)
