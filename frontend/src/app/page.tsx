@@ -16,7 +16,7 @@ import {
 
 const ChoroplethMap = dynamic(() => import('@/components/ChoroplethMap'), { ssr: false })
 
-const API = 'http://127.0.0.1:8000'
+const API = '/api'
 
 const CLUSTER_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#f43f5e']
 

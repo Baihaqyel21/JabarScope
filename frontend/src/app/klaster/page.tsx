@@ -8,7 +8,7 @@ import {
 } from 'recharts'
 import { AlertTriangle, Users, CheckCircle, AlertCircle, Layers, Target, Brain } from 'lucide-react'
 
-const API = 'http://127.0.0.1:8000'
+const API = '/api'
 
 const CLUSTER_COLORS: Record<string, string> = {
   'Klaster 1': '#10b981',
